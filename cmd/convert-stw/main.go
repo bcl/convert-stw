@@ -12,31 +12,16 @@ import (
 	"strings"
 )
 
-// OutputType - I'd like to be able to store this into OutStyle in cfg based on --lines or --paragraphs
-// But I don't see a way to use flags like that
-type OutputType int
-
-const (
-	lineOutput OutputType = iota
-	paragraphOutput
-)
-
 type cmdlineArgs struct {
-	OutStyle      OutputType // Line or Paragraph output
-	LinesOut      bool
-	ParagraphsOut bool
-	MarginsOut    bool // Output information about margins
-	InFile        string
-	OutFile       string
+	SettingsOut bool // Output information about settings at the end
+	InFile      string
+	OutFile     string
 }
 
 var cfg = cmdlineArgs{
-	OutStyle:      lineOutput,
-	LinesOut:      true,
-	ParagraphsOut: false,
-	MarginsOut:    false,
-	InFile:        "", // Use stdin if not set
-	OutFile:       "", // Use stdout if not set
+	SettingsOut: false,
+	InFile:      "", // Use stdin if not set
+	OutFile:     "", // Use stdout if not set
 }
 
 // FontType - Supported font types
@@ -74,25 +59,16 @@ type documentSettings struct {
 	ChainFile        []byte
 }
 
-// parserState - Used by the parser to track handling of the next byte
-type parserState int
-
-const (
-	headerState parserState = iota
-	textState
-)
-
+/* parseArgs handles parsing the cmdline args and setting values in the global cfg struct */
 func parseArgs() {
-	flag.BoolVar(&cfg.LinesOut, "lines", cfg.LinesOut, "Output Lines")
-	flag.BoolVar(&cfg.ParagraphsOut, "paragraphs", cfg.ParagraphsOut, "Output Paragraphs")
-	flag.BoolVar(&cfg.MarginsOut, "margins", cfg.MarginsOut, "Output margin details")
+	flag.BoolVar(&cfg.SettingsOut, "settings", cfg.SettingsOut, "Output settings at the end")
 	flag.StringVar(&cfg.InFile, "input", cfg.InFile, "Input file (default stdin)")
 	flag.StringVar(&cfg.OutFile, "output", cfg.OutFile, "Output file (default stdout)")
 
 	flag.Parse()
 }
 
-/* Read bytes until the expected string is matched */
+/* readUntil reads bytes until the expected string is matched */
 func readUntil(fin *bufio.Reader, match []byte) error {
 	mIdx := 0
 	mBuff := make([]byte, 1)
@@ -133,7 +109,7 @@ func readInt(fin *bufio.Reader, n int) (int, error) {
 	return value, nil
 }
 
-/* readString reads characters until it hits a 0x00 */
+/* readString reads characters until it hits a terminator byte */
 func readString(fin *bufio.Reader, terminate byte) ([]byte, error) {
 	buf := make([]byte, 80)
 	mBuff := make([]byte, 1)
@@ -153,6 +129,7 @@ func readString(fin *bufio.Reader, terminate byte) ([]byte, error) {
 	return buf, nil
 }
 
+/* convertStw reads a STWriter document and outputs an ASCII document */
 func convertStw(inDoc *bufio.Reader, outDoc *bufio.Writer) error {
 	var settings documentSettings
 	var nextByte byte
@@ -219,7 +196,7 @@ func convertStw(inDoc *bufio.Reader, outDoc *bufio.Writer) error {
 		*/
 		// Check for control codes
 		switch nextByte {
-		case 0x00: // In line mode output a \n, in paragraph mode...
+		case 0x00: // End of a line/paragraph
 			outDoc.WriteByte('\n')
 
 			// Turn off line oriented flags
@@ -398,6 +375,7 @@ func convertStw(inDoc *bufio.Reader, outDoc *bufio.Writer) error {
 	return nil
 }
 
+/* main sets up the input and output files, calls convertStw */
 func main() {
 	parseArgs()
 
