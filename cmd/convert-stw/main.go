@@ -59,6 +59,23 @@ type documentSettings struct {
 	ChainFile        []byte
 }
 
+/* printDocumentSettings displays the document settings */
+func printDocumentSettings(settings *documentSettings) {
+	fmt.Println("\n\nDocument Settings\n=================")
+	fmt.Printf("Margins:\n    Top       : %d\n    Bottom    : %d\n    Left      : %d\n    Right     : %d\n\n",
+		settings.MarginTop, settings.MarginBottom, settings.MarginLeft, settings.MarginRight)
+	fmt.Printf("Column2:\n    Left      : %d\n    Right     : %d\n\n",
+		settings.MarginLeft2, settings.MarginRight2)
+	fmt.Printf("Page Length   : %d\n", settings.PageLength)
+	fmt.Printf("Starting Page : %d\n\n", settings.StartPageNum)
+	fmt.Printf("Header        : %s\n", settings.Header)
+	fmt.Printf("Footer        : %s\n\n", settings.Footer)
+	fmt.Println("Spacing")
+	fmt.Printf("    Line      : %d\n", settings.LineSpacing)
+	fmt.Printf("    Paragraph : %d\n\n", settings.ParagraphSpacing)
+	fmt.Printf("Chained file  : %s\n", settings.ChainFile)
+}
+
 /* parseArgs handles parsing the cmdline args and setting values in the global cfg struct */
 func parseArgs() {
 	flag.BoolVar(&cfg.SettingsOut, "settings", cfg.SettingsOut, "Output settings at the end")
@@ -371,6 +388,10 @@ func convertStw(inDoc *bufio.Reader, outDoc *bufio.Writer) error {
 		}
 	}
 	outDoc.Flush()
+
+	if cfg.SettingsOut {
+		printDocumentSettings(&settings)
+	}
 
 	return nil
 }
